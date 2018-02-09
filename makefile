@@ -4,9 +4,11 @@ SOC=bl31
 TOS=bl32
 NS=bl33
 
-LIST=root trusted_key non_trusted_key $(SCP) $(SOC) $(TOS) $(NS)
+CERT_LIST=trusted_key $(SCP) $(SOC) $(TOS) $(NS)
 
-$(eval PEMS=$(foreach pe,${LIST},${pe}.pem))
+PEM_LIST=$(CERT_LIST)  root non_trusted_key
+$(eval PEMS=$(foreach pe,${PEM_LIST},${pe}.pem))
+
 
 TARGET_PEMS=
 define GEN_RSA_KEY
@@ -66,7 +68,7 @@ $(eval $(foreach pe,${PEMS},$(call GEN_RSA_KEY,${pe})))
 $(eval $(foreach pe,${PEMS},$(call GEN_PK_KEY,${pe})))
 $(eval $(foreach pe,${PEMS},$(call DUMP_PK,${pe})))
 $(eval $(foreach pe,${PEMS},$(call GEN_PK_HASH,${pe})))
-$(eval $(foreach pe,${PEMS},$(call CRT_TO_PEM,${pe})))
+$(eval $(foreach pe,${CERT_LIST},$(call CRT_TO_PEM,${pe}.pem)))
 
 rsa_key:$(TARGET_PEMS)
 
@@ -76,7 +78,7 @@ rsa_hash:$(TARGET_HASH)
 
 crt2pem:$(TARGET_CRT_PEM)
 
-new_crt:
+new_crt:$(TARGET_PEMS)
 	./cert_create \
 		--tfw-nvctr 1 \
 		--ntfw-nvctr 2 \
@@ -103,6 +105,9 @@ new_crt:
 		--tb-fw            $(TB).bin \
 		--tb-fw-cert       $(TB)_fw.crt \
 		--trusted-key-cert trusted_key.crt \
+
+
+all: $(TARGET_PEMS)
 
 clean:
 	rm -rf *.pem *.sha256 *.crt *.der
