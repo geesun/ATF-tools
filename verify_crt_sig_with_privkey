@@ -1,0 +1,7 @@
+
+#get signature from the certificate 
+SIGNATURE_HEX=$(openssl x509 -in $1 -text -noout -certopt ca_default -certopt no_validity -certopt no_serial -certopt no_subject -certopt no_extensions -certopt no_signame | grep -v 'Algorithm' |grep -v 'Length' |grep -v 'Trailer' | tr -d '[:space:]:')
+echo ${SIGNATURE_HEX} | xxd -r -p > $1.sig
+
+#use the private decrypt the signature 
+openssl rsautl -verify -inkey $2 -in $1.sig -pubin > $1.sig.dec
