@@ -1,4 +1,4 @@
-SCP=scp_bl2
+SCP=scp
 TB=bl2
 SOC=bl31
 TOS=bl32
