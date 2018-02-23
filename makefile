@@ -4,35 +4,32 @@ SOC=bl31
 TOS=bl32
 NS=bl33
 
-CERT_LIST=trusted_key $(SCP) $(SOC) $(TOS) $(NS)
-
-PEM_LIST=$(CERT_LIST)  root non_trusted_key
-$(eval PEMS=$(foreach pe,${PEM_LIST},${pe}.pem))
-
+RSA_KEYS=root trusted non_trusted $(SCP) $(SOC) $(TOS) $(NS)
+CERTIFICATES=trusted $(SCP) $(SOC) $(TOS) $(NS)
 
 TARGET_PEMS=
 define GEN_RSA_KEY
-TARGET_PEMS += $(1)
-$(1):
-	openssl genrsa -out $(1) 2048
+$(eval PEM=$(1).pem)
+TARGET_PEMS += $(1).pem
+$(PEM):
+	openssl genrsa -out $(PEM) 2048
 
 endef
 
 TARGET_PKS = 
 define GEN_PK_KEY
-
-$(eval DER=$(patsubst %.pem,%_pk.der,$(1)))
+$(eval PEM=$(1).pem)
+$(eval DER=$(1)_pk.der)
 TARGET_PKS += $(DER)
-$(DER):$(1)
-	openssl rsa -in $(1) -inform PEM -pubout -outform DER -out $(DER)
+$(DER):$(PEM)
+	openssl rsa -in $(PEM) -inform PEM -pubout -outform DER -out $(DER)
 
 endef 
 
 
 define DUMP_PK
-
-$(eval DER=$(patsubst %.pem,%_pk.der,$(1)))
-$(eval DUMP=$(patsubst %.pem,%_pk_dump,$(1)))
+$(eval DER=$(1)_pk.der)
+$(eval DUMP=$(1)_pk.dump)
 $(DUMP):$(DER)
 	od -t x1 -j 24 $(DER)
 
@@ -40,9 +37,8 @@ endef
 
 TARGET_HASH = 
 define GEN_PK_HASH
-
-$(eval DER=$(patsubst %.pem,%_pk.der,$(1)))
-$(eval HASH=$(patsubst %.pem,%_pk.sha256,$(1)))
+$(eval DER=$(1)_pk.der)
+$(eval HASH=$(1)_pk.sha256)
 
 TARGET_HASH += $(HASH)
 $(HASH):$(DER)
@@ -54,21 +50,31 @@ endef
 TARGET_CRT_PEM = 
 define CRT_TO_PEM
 
-$(eval CRT=$(patsubst %.pem,%.crt,$(1)))
-$(eval PEM=$(patsubst %.pem,%.crt.pem,$(1)))
+$(eval CRT=$(1)_key.crt)
+$(eval PEM=$(1)_key.crt.pem)
+$(eval FW_CRT=$(1)_fw.crt)
+$(eval FW_PEM=$(1)_fw.crt.pem)
 
-TARGET_CRT_PEM += $(PEM)
+TARGET_CRT_PEM += $(PEM) 
+ifneq ($(1), trusted)
+TARGET_CRT_PEM += $(FW_PEM)
+endif
 
 $(PEM):$(CRT)
 	openssl x509 -inform DER -in $(CRT) -out $(PEM)
 
+ifneq ($(1), trusted)
+$(FW_PEM):$(FW_CRT)
+	openssl x509 -inform DER -in $(FW_CRT) -out $(FW_PEM)
+endif 
+
 endef
 
-$(eval $(foreach pe,${PEMS},$(call GEN_RSA_KEY,${pe})))
-$(eval $(foreach pe,${PEMS},$(call GEN_PK_KEY,${pe})))
-$(eval $(foreach pe,${PEMS},$(call DUMP_PK,${pe})))
-$(eval $(foreach pe,${PEMS},$(call GEN_PK_HASH,${pe})))
-$(eval $(foreach pe,${CERT_LIST},$(call CRT_TO_PEM,${pe}.pem)))
+$(eval $(foreach pe,${RSA_KEYS},$(call GEN_RSA_KEY,${pe})))
+$(eval $(foreach pe,${RSA_KEYS},$(call GEN_PK_KEY,${pe})))
+$(eval $(foreach pe,${RSA_KEYS},$(call DUMP_PK,${pe})))
+$(eval $(foreach pe,${RSA_KEYS},$(call GEN_PK_HASH,${pe})))
+$(eval $(foreach pe,${CERTIFICATES},$(call CRT_TO_PEM,${pe})))
 
 rsa_key:$(TARGET_PEMS)
 
@@ -84,8 +90,8 @@ new_crt:$(TARGET_PEMS)
 		--ntfw-nvctr 2 \
 		--key-alg rsa \
 		--rot-key root.pem \
-		--trusted-world-key trusted_key.pem \
-		--non-trusted-world-key non_trusted_key.pem \
+		--trusted-world-key trusted.pem \
+		--non-trusted-world-key non_trusted.pem \
 		--scp-fw           $(SCP).bin  \
 		--scp-fw-key       $(SCP).pem  \
 		--scp-fw-key-cert  $(SCP)_key.crt \
