@@ -5,7 +5,7 @@ TOS=bl32
 NS=bl33
 
 RSA_KEYS=root trusted non_trusted $(SCP) $(SOC) $(TOS) $(NS)
-CERTIFICATES=trusted $(SCP) $(SOC) $(TOS) $(NS)
+CERTIFICATES=trusted $(SCP) $(SOC) $(TOS) $(NS) $(TB)
 
 TARGET_PEMS=
 define GEN_RSA_KEY
@@ -20,9 +20,12 @@ TARGET_PKS =
 define GEN_PK_KEY
 $(eval PEM=$(1).pem)
 $(eval DER=$(1)_pk.der)
-TARGET_PKS += $(DER)
+$(eval PK_PEM=$(1)_pk.pem)
+TARGET_PKS += $(DER) $(PK_PEM)
 $(DER):$(PEM)
 	openssl rsa -in $(PEM) -inform PEM -pubout -outform DER -out $(DER)
+$(PK_PEM):$(PEM)
+	openssl rsa -in $(PEM) -inform PEM -pubout -outform PEM -out $(PK_PEM)
 
 endef 
 
@@ -55,15 +58,14 @@ $(eval PEM=$(1)_key.crt.pem)
 $(eval FW_CRT=$(1)_fw.crt)
 $(eval FW_PEM=$(1)_fw.crt.pem)
 
+ifneq ($(1), $(TB))
 TARGET_CRT_PEM += $(PEM) 
-ifneq ($(1), trusted)
-TARGET_CRT_PEM += $(FW_PEM)
-endif
-
 $(PEM):$(CRT)
 	openssl x509 -inform DER -in $(CRT) -out $(PEM)
+endif 
 
 ifneq ($(1), trusted)
+TARGET_CRT_PEM += $(FW_PEM)
 $(FW_PEM):$(FW_CRT)
 	openssl x509 -inform DER -in $(FW_CRT) -out $(FW_PEM)
 endif 
