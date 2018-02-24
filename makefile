@@ -70,6 +70,8 @@ endif
 
 endef
 
+all: rsa_key rsa_pk_key rsa_hash new_crt crt2pem
+
 $(eval $(foreach pe,${RSA_KEYS},$(call GEN_RSA_KEY,${pe})))
 $(eval $(foreach pe,${RSA_KEYS},$(call GEN_PK_KEY,${pe})))
 $(eval $(foreach pe,${RSA_KEYS},$(call DUMP_PK,${pe})))
@@ -111,9 +113,6 @@ new_crt:$(TARGET_PEMS)
 		--tb-fw            $(TB).bin \
 		--tb-fw-cert       $(TB)_fw.crt \
 		--trusted-key-cert trusted_key.crt \
-
-
-all: $(TARGET_PEMS)
 
 clean:
 	rm -rf *.pem *.sha256 *.crt *.der
