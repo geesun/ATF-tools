@@ -116,5 +116,22 @@ new_crt:$(TARGET_PEMS)
 		--tb-fw-cert       $(TB)_fw.crt \
 		--trusted-key-cert trusted_key.crt \
 
+fvp_cfg:root_pk.sha256
+	@ key=`od -t x4 --endian=big root_pk.sha256 |awk '{ print  $$2" "$$3" "$$4" "$$5 }' |head -2 | awk '{getline x;print x;}1' |tr '\r\n' ' '`; \
+	cd .. ;pwd=`pwd`; \
+	echo "pctl.startup=0.0.0.0 	\\n\
+	bp.secure_memory=0     		\\n\
+	cluster0.NUM_CORES=1   		\\n\
+	cluster1.NUM_CORES=1   		\\n\
+	cache_state_modelled=0 		\\n\
+	bp.pl011_uart0.untimed_fifos=1        	\\n\
+	bp.pl011_uart0.out_file=/tmp/uart0.log  \\n\
+	bp.pl011_uart1.out_file=/tmp/uart1.log  \\n\
+	bp.ve_sysregs.mmbSiteDefault=0 	        \\n\
+	bp.ve_sysregs.exit_on_shutdown=1        \\n\
+	bp.secureflashloader.fname=$$pwd/build/fvp/debug/bl1.bin 	\\n\
+	bp.flashloader0.fname=$$pwd/build/fvp/debug/fip.bin  		\\n\
+	bp.trusted_key_storage.public_key=$$key " >fvp.cfg
+
 clean:
 	rm -rf *.pem *.sha256 *.crt *.der
