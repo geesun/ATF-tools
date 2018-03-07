@@ -117,8 +117,8 @@ new_crt:$(TARGET_PEMS)
 		--trusted-key-cert trusted_key.crt \
 
 fvp_cfg:root_pk.sha256
-	@ key=`od -t x4 --endian=big root_pk.sha256 |awk '{ print  $$2" "$$3" "$$4" "$$5 }' |head -2 | awk '{getline x;print x;}1' |tr '\r\n' ' '`; \
-	cd .. ;pwd=`pwd`; \
+	key=`od -t x4 --endian=big root_pk.sha256 |awk '{ print  $$2" "$$3" "$$4" "$$5 }' |head -2 | awk '{getline x;print x;}1' |tr '\r\n' ' '`; \
+	cd .. ;pwd=`pwd`; cd - ;\
 	echo "pctl.startup=0.0.0.0 	\\n\
 	bp.secure_memory=0     		\\n\
 	cluster0.NUM_CORES=1   		\\n\
